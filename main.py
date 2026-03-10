@@ -537,7 +537,7 @@ class QuantSystem:
         print("=" * 60)
         
         # 设置定时任务
-        schedule.every().day.at(schedule_time).do(self.run_full)
+        schedule.every().day.at(schedule_time).do(self.run_with_b1_match)
         
         print("\n按 Ctrl+C 停止")
         
@@ -571,6 +571,7 @@ def main():
   python main.py run --b1-match                # 完整流程+B1完美图形匹配排序
   python main.py run --b1-match --min-similarity 70  # 匹配+提高相似度阈值到70%
   python main.py run --b1-match --lookback-days 30   # 使用30天回看期
+  python main.py schedule                      # 启动定时调度
   python main.py web                           # 启动Web界面
   python main.py --version                     # 显示版本信息
 
@@ -595,9 +596,9 @@ B1完美图形匹配:
 
     parser.add_argument(
         'command',
-        choices=['init', 'update', 'run', 'web'],
+        choices=['init', 'update', 'run', 'web', 'schedule'],
         nargs='?',
-        help='要执行的命令: init(初始化数据), update(更新数据), run(执行选股), web(启动Web服务器)'
+        help='要执行的命令: init(初始化数据), update(更新数据), run(执行选股), web(启动Web服务器), schedule(启动定时调度)'
     )
 
     parser.add_argument(
@@ -709,6 +710,10 @@ B1完美图形匹配:
         # 启动Web服务器
         from web_server import run_web_server
         run_web_server(host=args.host, port=args.port)
+    
+    elif args.command == 'schedule':
+        # 启动定时调度
+        quant.run_schedule()
 
 
 if __name__ == '__main__':
