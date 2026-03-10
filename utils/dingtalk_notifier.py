@@ -104,6 +104,10 @@ class DingTalkNotifier:
         self._min_interval = 2.0  # 最小发送间隔2秒
         self._rate_limiter = RateLimiter(max_per_minute=20, min_interval=2.0)  # 限流器
     
+    def is_configured(self):
+        """检查是否配置了钉钉通知 (需要 webhook_url 和 secret)"""
+        return bool(self.webhook_url and self.secret)
+    
     def _generate_sign(self):
         """生成钉钉签名"""
         if not self.secret:

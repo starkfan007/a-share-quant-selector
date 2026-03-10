@@ -315,8 +315,12 @@ class QuantSystem:
 
         # 3. 发送通知（带K线图）
         if results:
+            if not self.notifier.is_configured():
+                print("\n⚠️ 钉钉通知器未配置，跳过发送选股结果")
+                return results
 
             # 使用带K线图的发送方法
+            print("\n📤 发送钉钉通知...")
             self.notifier.send_stock_selection_with_charts(
                 results,
                 stock_names,
@@ -502,6 +506,10 @@ class QuantSystem:
         
         # 3. 发送通知
         if match_result.get('matched'):
+            if not self.notifier.is_configured():
+                print("\n⚠️ 钉钉通知器未配置，跳过发送选股结果")
+                return match_result
+                
             print("\n📤 发送钉钉通知...")
             self.notifier.send_b1_match_results(
                 match_result['matched'],
