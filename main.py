@@ -187,6 +187,14 @@ class QuantSystem:
                     note = " (J值上限)"
                 elif param_name in ['M1', 'M2', 'M3', 'M4']:
                     note = " (MA周期)"
+                elif param_name == 'N1':
+                    note = " (砖型图周期)"
+                elif param_name == 'N2':
+                    note = " (平滑周期)"
+                elif param_name == 'J_LIMIT':
+                    note = " (J值上限)"
+                elif param_name == 'BRICK_RATIO':
+                    note = " (动量比率)"
                 print(f"      {param_name}: {param_value}{note}")
         
         # 加载股票数据（流式处理，不预存全部数据）
@@ -206,12 +214,29 @@ class QuantSystem:
         import gc
         results = {}
         indicators_dict = {}  # 只保存入选股票的数据
-        category_count = {'bowl_center': 0, 'near_duokong': 0, 'near_short_trend': 0}
+        category_count = {
+            'bowl_center': 0, 
+            'near_duokong': 0, 
+            'near_short_trend': 0,
+            'brick_pattern_signal': 0
+        }
+        
+        # 建立分类与策略名称的对应关系，以便跳过不相关的策略
+        strategy_category_map = {
+            'bowl_center': 'BowlReboundStrategy',
+            'near_duokong': 'BowlReboundStrategy',
+            'near_short_trend': 'BowlReboundStrategy',
+            'brick_pattern_signal': 'BrickPatternStrategy'
+        }
         
         # 限制处理数量
         process_codes = stock_codes[:max_stocks] if max_stocks else stock_codes
         
         for strategy_name, strategy in self.registry.strategies.items():
+            # 如果指定了具体分类，且当前策略不产生该分类，则跳过
+            if category != 'all' and strategy_name != strategy_category_map.get(category):
+                continue
+
             print(f"\n执行策略: {strategy_name}")
             signals = []
             valid_count = 0
@@ -275,8 +300,17 @@ class QuantSystem:
                 code = signal['code']
                 name = signal.get('name', stock_names.get(code, '未知'))
                 for s in signal['signals']:
-                    cat_emoji = {'bowl_center': '🥣', 'near_duokong': '📊', 'near_short_trend': '📈'}.get(s.get('category'), '❓')
-                    print(f"  {cat_emoji} {code} {name}: 价格={s['close']}, J={s['J']}, 理由={s['reasons']}")
+                    cat_emoji = {
+                        'bowl_center': '🥣', 
+                        'near_duokong': '📊', 
+                        'near_short_trend': '📈',
+                        'brick_pattern_signal': '🧱'
+                    }.get(s.get('category'), '❓')
+                    
+                    if s.get('category') == 'brick_pattern_signal':
+                        print(f"  {cat_emoji} {code} {name}: 价格={s['close']}, 砖型值={s['brick_val']}, 理由={s['reasons']}")
+                    else:
+                        print(f"  {cat_emoji} {code} {name}: 价格={s['close']}, J={s['J']}, 理由={s['reasons']}")
         
         # 显示分类统计
         print("\n" + "-" * 60)
@@ -284,6 +318,7 @@ class QuantSystem:
         print(f"  🥣 回落碗中: {category_count.get('bowl_center', 0)} 只")
         print(f"  📊 靠近多空线: {category_count.get('near_duokong', 0)} 只")
         print(f"  📈 靠近短期趋势线: {category_count.get('near_short_trend', 0)} 只")
+        print(f"  🧱 砖型图转折: {category_count.get('brick_pattern_signal', 0)} 只")
         print("-" * 60)
         
         # 如果需要返回数据字典（用于K线图生成）
@@ -576,10 +611,11 @@ def main():
   python main.py --version                     # 显示版本信息
 
 分类说明:
-  all              - 全部（回落碗中 + 靠近多空线 + 靠近短期趋势线）
+  all              - 全部（回落碗中 + 靠近多空线 + 靠近短期趋势线 + 砖型图转折）
   bowl_center      - 回落碗中（优先级最高）
   near_duokong     - 靠近多空线（±duokong_pct%，默认3%）
   near_short_trend - 靠近短期趋势线（±short_pct%，默认2%）
+  brick_pattern_signal - 砖型图转折（由绿转红）
 
 B1完美图形匹配:
   基于10个历史成功案例（双线+量比+形态三维相似度匹配）
@@ -630,9 +666,9 @@ B1完美图形匹配:
     parser.add_argument(
         '--category',
         type=str,
-        choices=['all', 'bowl_center', 'near_duokong', 'near_short_trend'],
+        choices=['all', 'bowl_center', 'near_duokong', 'near_short_trend', 'brick_pattern_signal'],
         default='all',
-        help='筛选股票分类: all(全部), bowl_center(回落碗中), near_duokong(靠近多空线), near_short_trend(靠近短期趋势线)'
+        help='筛选股票分类: all(全部), bowl_center(回落碗中), near_duokong(靠近多空线), near_short_trend(靠近短期趋势线), brick_pattern_signal(砖型图转折)'
     )
     
     # 从配置读取B1PatternMatch默认值
